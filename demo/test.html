@@ -1,0 +1,244 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"> 
+<title>css3 matrix test</title>
+<style>
+#abc{
+	position:absolute;
+	z-index:1;
+	
+	margin:-0px 0 0 500px;
+	-webkit-transition: all 1000 ease-in-out;
+	border:1px solid gray;
+	-webkit-border-radius:10px;
+	overflow:hidden;
+}
+.panel{
+	z-index:2;
+	top:100px;
+	position:absolute;
+	padding:10px;
+	width:250px;
+	text-align:right;
+	background:white;
+	opacity:0.8;
+	margin-left:200px;
+	border:1px solid gray;
+	-webkit-border-radius:10px;
+}
+.panel input,textarea{
+	-webkit-border-radius:5px;
+	border:1px solid gray;
+	text-shadow: 1px 1px 1px gray;
+	color:#000020;
+	width:150px;
+	text-align:center;
+	margin-left:5px;
+}
+.panel button{
+	width:150px;
+	height:50px;
+	font-size:17px;
+}
+#matrix{
+	height:100px;
+}
+img{
+	-webkit-transform:scale(0.5);
+}
+</style>
+</head>
+<body>
+<div class="panel">
+<div><label>translate-x</label><input type="text" id="translatex" value="0" onclick="this.value=''"></div>
+<div><label>translate-x</label><input type="text" id="translatey" value="0" onclick="this.value=''"></div>
+<div><label>scale-x</label><input type="text" id="scalex" value="1" onclick="this.value=''"></div>
+<div><label>scale-y</label><input type="text" id="scaley" value="1" onclick="this.value=''"></div>
+<div><label>rotate</label><input type="text" id="rotate" value="0" onclick="this.value=''"></div>
+<div><label>skew-x</label><input type="text"  value="0" id="skewx" onclick="this.value=''"></div>
+<div><label>skew-y</label><input type="text" value="0" id="skewy" onclick="this.value=''"></div>
+<div><button id="transform">transform</button></div>
+<div><label>matrix</label><textarea id="matrix"></textarea></div>
+</div>
+<div id="abc"><img src="x4.jpg" id="img"></div>
+<script>
+var Ya2DMatrix=function(o){
+	this.matrix = [1,0,0,1,0,0];
+	this.translate = {x:0,y:0};
+	this.scale  ={x:1,y:1};
+	this.rotate = 0;
+	this.skew = {x:0,y:0};
+	var pn = Math.pow(10,15);
+	this.angle  = {
+		sin:function(x){
+			return Math.round(Math.sin(x*Math.PI/180)*pn)/pn;
+		},
+		cos:function(x){
+			return Math.round(Math.cos(x*Math.PI/180)*pn)/pn;
+		},
+		tan:function(x){
+			return Math.round(Math.tan(x*Math.PI/180)*pn)/pn;
+		}
+	}
+	o&&this.toMatrix(o);
+};
+Ya2DMatrix.prototype={
+	multiply:function(){
+		var s =arguments,
+			len = s.length;
+		if (len<2){
+			return s[0];
+		}
+		var m = function(a,b){
+			return [
+				a[0]*b[0]+a[2]*b[1],
+				a[1]*b[0]+a[3]*b[1],
+				a[0]*b[2]+a[2]*b[3],
+				a[1]*b[2]+a[3]*b[3],
+				a[0]*b[4]+a[2]*b[5]+a[4],
+				a[1]*b[4]+a[3]*b[5]+a[5]
+			];
+		}
+		var temp = m(s[0],s[1]);
+			
+		for (var i=2;i<len;i++){
+			temp = m(temp,s[i]);
+		}
+		return temp;
+	},
+	toMatrix:function(o){
+		var translate = o.translate||{x:0,y:0},
+			   scale = o.scale||{x:1,y:1},
+			   rotate = o.rotate||0,
+			   skew = o.skew||{x:0,y:0};
+		var sin = this.angle.sin,
+			cos = this.angle.cos,
+			tan = this.angle.tan;		
+		var translateM = [1,0,0,1,translate.x,translate.y],
+			scaleM = [scale.x,0,0,scale.y,0,0],
+			rotateM = [cos(rotate),sin(rotate),-sin(rotate),cos(rotate),0,0],
+			skewxM = [1,0,tan(skew.x),1,0,0],
+			skewyM = [1,tan(skew.y),0,1,0,0];
+		return this.multiply(translateM,scaleM,rotateM,skewxM,skewyM);
+	},
+	setTranslate : function(translate){
+		this.translate = translate;
+		this.matrix = this.toMatrix({translate:this.translate,scale:this.scale,rotate:this.rotate,skew:this.skew});
+	},
+	setScale:function(scale){
+		this.scale = scale;
+		this.matrix = this.toMatrix({translate:this.translate,scale:this.scale,rotate:this.rotate,skew:this.skew});
+	},
+	setRotate:function(rotate){
+		this.rotate = rotate;
+		this.matrix = this.toMatrix({translate:this.translate,scale:this.scale,rotate:this.rotate,skew:this.skew});
+	},
+	setSkew:function(skew){
+		this.skew = skew;
+		this.matrix = this.toMatrix({translate:this.translate,scale:this.scale,rotate:this.rotate,skew:this.skew});
+	},
+	getMatrix:function(){
+		return this.matrix;
+	}
+};
+
+
+
+////////////////
+
+var p = new Ya2DMatrix();
+
+
+var g = function(id){
+	return document.getElementById(id);
+};
+/*
+var Action = function(){
+	var action = [];
+	var time = 1000;
+	this.add = function(fn){
+		action.push(fn);
+	}
+	this.play = function(){
+		for (var i=0;i<action.length;i++){
+			setTimeout(action[i],i*time);
+		}
+	}
+
+}
+var action = new Action();
+action.add(function(){
+	p.setRotate(80);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.add(function(){
+	p.setRotate(10);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.add(function(){
+	p.setRotate(70);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.add(function(){
+	p.setRotate(20);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.add(function(){
+	p.setRotate(60);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.add(function(){
+	p.setRotate(30);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.add(function(){
+	p.setRotate(50);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.add(function(){
+	p.setRotate(40);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.add(function(){
+	p.setRotate(45);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.add(function(){
+	p.setRotate(43);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.add(function(){
+	p.setRotate(45);
+	g("abc").style["-webkit-transform"]="matrix("+p.getMatrix()+")";
+
+});
+action.play();
+*/
+
+
+g("transform").onclick=function(){
+	p.setTranslate({x:parseInt(g("translatex").value),y:parseInt(g("translatey").value)});
+	p.setScale({x:parseInt(g("scalex").value),y:parseInt(g("scaley").value)});
+	p.setRotate(parseInt(g("rotate").value));
+	p.setSkew({x:parseInt(g("skewx").value),y:parseInt(g("skewy").value)});
+	var matrix = p.getMatrix();
+	g("matrix").value=matrix.toString().replace(/,/g,"\r\n")
+	g("abc").style["-webkit-transform"]="matrix("+matrix+")";
+}
+</script>
+
+
+
+
+</body>
+</html>
